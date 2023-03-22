@@ -2,6 +2,9 @@
 #include "freertos/FreeRTOS.h"
 #include "Adafruit_MPU6050.h"
 #include <Servo.h>
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
 
 // variaveis globais
 Adafruit_MPU6050 acelerometro;
@@ -17,37 +20,74 @@ QueueHandle_t xQueueSensoresEstacao;
 TaskHandle_t xTaskSensoresCasa, xTaskSensoresEstacao;
 
 // Definição dos pinos
-#define SensorUmidade 34
-#define SensorChuva 36
-#define buzzer 25
+#define SensorUmidade 26
+#define SensorChuva 33
+// #define buzzer 17
+
+// Firebase e Wifi
+#define Wifi_SSID "MALU"
+#define Wifi_Senha "37159480"
+#define API_Key "AIzaSyAfh8oyA1gxW6alJvT8KfieBXj_8FgsnLI"
+#define DataBase_Url "https://projeto-monitoramento-39de2-default-rtdb.firebaseio.com/"
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+bool singupOK = false;
+
+unsigned long sendDataPrevMillis = 0;
 
 void setup()
 {
+  Serial.begin(9600);
 
-  while (!Serial.begin(9600))
+  if (!Serial)
   {
-    Serial.println("Serial não conectado!");
+    Serial.println("ERRO");
+  }
+
+  WiFi.begin(Wifi_SSID, Wifi_Senha);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Conectando ao Wifi");
     delay(1000);
   }
 
-  while (!acelerometro.begin())
+  Serial.print("Wifi conectado");
+  Serial.println(WiFi.localIP());
+
+  config.api_key = API_Key;
+  config.database_url = DataBase_Url;
+
+  if (Firebase.signUp(&config, &auth, "", ""))
   {
-    Serial.println("Acelerometro não conectado!");
-    delay(1000);
+    singupOK = true;
+  }
+  else
+
+  {
+    Serial.println("ErrO FIREBASE ");
   }
 
-  while (!servoMotor.attach(14))
-  {
-    Serial.println("Servo Motor não conectado!");
-    delay(1000);
-  }
+  config.token_status_callback = tokenStatusCallback;
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
 
-  pinMode(buzzer, OUTPUT);
+  // while (!acelerometro.begin())
+  // {
+  //   Serial.println("Acelerometro não conectado!");
+  //   delay(1000);
+  // }
+  // servoMotor.attach(17);
 
-  xTaskCreate(vTaskSensoresCasa, "SensosresCasa", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskSensoresCasa);
-  xTaskCreate(vTaskSensoresEstacao, "SensosresEstacao", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskSensoresEstacao);
+  // pinMode(buzzer, OUTPUT);
 
-  xQueueSensoresEstacao = xQueueCreate(1, sizeof(int));
+  // xTaskCreate(vTaskSensoresCasa, "SensosresCasa", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskSensoresCasa);
+  //  xTaskCreate(vTaskSensoresEstacao, "SensosresEstacao", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskSensoresEstacao);
+
+  // xQueueSensoresEstacao = xQueueCreate(1, sizeof(int));
 
   // COMUNICACAO COM O BANCO DE DADOS - firebase?
   // WiFiLocation - obter localização com base na rede
@@ -55,12 +95,20 @@ void setup()
 
 void loop()
 {
-  vTaskDelay(pdMS_TO_TICKS(10));
+
+  if (Firebase.ready() && singupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0))
+  {
+    sendDataPrevMillis = millis();
+
+    if (Firebase.RTDB.setInt(&fbdo, "Projeto/Sensores/Led/", 20));
+  }
+
+  vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 void vTaskSensoresCasa(void *parameters)
 {
-  digitalWrite(buzzer, HIGH);
+  // digitalWrite(buzzer, HIGH);
 
   posInicialServo = 0;
   while (1)
@@ -68,21 +116,22 @@ void vTaskSensoresCasa(void *parameters)
     // Sensor Led
 
     // Buzzer
-    digitalWrite(buzzer, HIGH);
+    // digitalWrite(buzzer, HIGH);
 
     // MotorServo
-    for (posInicialServo = 0; posInicialServo <= 180; posInicialServo++)
+    for (int i = 0; i <= 180; i++)
     {
       Serial.print("Posicao Servo: ");
-      Serial.println(posInicialServo);
+      Serial.println(i);
 
-      servoMotor.write(posInicialServo);
+      servoMotor.write(i);
 
-      vTaskDelay(300);
+      vTaskDelay(100);
     }
-  }
+    vTaskDelay(1000);
 
-  vTaskDelay(1000);
+    // digitalWrite(buzzer, LOW);
+  }
 }
 
 void vTaskSensoresEstacao(void *parameters)
@@ -102,7 +151,7 @@ void vTaskSensoresEstacao(void *parameters)
       percentual = (100 - (sensorValueUmidade * 100 / 4095));
     }
 
-    xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
+    // xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
 
     vTaskDelay(1000);
   }
