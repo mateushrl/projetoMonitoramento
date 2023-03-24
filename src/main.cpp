@@ -32,10 +32,7 @@ TaskHandle_t xTaskSensoresCasa, xTaskSensoresEstacao;
 
 // Firebase e Wifi
 
-#define Wifi_SSID "MALU"
-#define Wifi_Senha "37159480"
-#define API_Key "AIzaSyAfh8oyA1gxW6alJvT8KfieBXj_8FgsnLI"
-#define DataBase_Url "https://projeto-monitoramento-39de2-default-rtdb.firebaseio.com/"
+
 
 FirebaseData fbdo;
 FirebaseAuth auth;
