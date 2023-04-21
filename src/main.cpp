@@ -45,7 +45,10 @@ void configuraPinosSensores();
 #define servo 27
 
 // Firebase e Wifi
+#define Wifi_SSID "MALU"                                                                // nome wifi
 #define Wifi_Senha "37159480"                                                           // senha wfi
+#define API_Key "AIzaSyAfh8oyA1gxW6alJvT8KfieBXj_8FgsnLI"                               // Chave para o firebase
+#define DataBase_Url "https://projeto-monitoramento-39de2-default-rtdb.firebaseio.com/" // url do banco firebase
 
 // API Clima
 float temperatura = 0.0;
@@ -53,6 +56,7 @@ float umidade = 0.0;
 String clima = "";
 String descricaoClima = "";
 WiFiClient wifiClient;
+const char *apiKey = "85af602f320d79e3c7e1bd814798105d"; // Chave api clima
 const int cityId = 3470127;                              // codigo para cidade de BH
 
 // struct para salvar e enviar dados da estação para o firebase
@@ -67,9 +71,8 @@ typedef struct
 
 void setup()
 {
-
-  ConfiguraPortaSerial();
-  ConfiguraWifi();
+  configuraPortaSerial();
+  configuraWifi();
   configuraFirebase();
   configuraPinosSensores();
 
@@ -211,24 +214,9 @@ void vTaskClima(void *parameters)
 
       Serial.print("Umidade: ");
       Serial.println(umidade);
-<<<<<<< HEAD
-    Serial.print("AC ");
-    Serial.println(pitch);
-    Serial.print("UM ");
-    Serial.println(sensorValueUmidade);
-    Serial.print("CH ");
-    Serial.println(sensorValueChuva);
 
-    // xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
-=======
-    Serial.print("Acelerador: ");
-    Serial.println(pitch);
-    Serial.print("Umidade: ");
-    Serial.println(sensorValueUmidade);
-    Serial.print("Chuva: ");
-    Serial.println(sensorValueChuva);
-
-    //xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
+      Serial.print("Clima: ");
+      Serial.println(clima);
 
       Serial.print("Descrição: ");
       Serial.println(descricaoClima);
@@ -263,11 +251,7 @@ void configuraPortaSerial()
 
   if (!Serial)
   {
-<<<<<<< HEAD
-    Serial.println("Porta Seria não conectada.");
-=======
     Serial.println("Porta Serial não conectada.");
->>>>>>> 35e6a4a6d0ba1bfb299aaaf38c51d571c257712f
   }
 }
 
