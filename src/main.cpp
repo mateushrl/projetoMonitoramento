@@ -46,9 +46,6 @@ void configuraPinosSensores();
 
 // Firebase e Wifi
 #define Wifi_SSID "MALU"                                                                // nome wifi
-#define Wifi_Senha "37159480"                                                           // senha wfi
-#define API_Key "AIzaSyAfh8oyA1gxW6alJvT8KfieBXj_8FgsnLI"                               // Chave para o firebase
-#define DataBase_Url "https://projeto-monitoramento-39de2-default-rtdb.firebaseio.com/" // url do banco firebase
 
 // API Clima
 float temperatura = 0.0;
@@ -56,7 +53,6 @@ float umidade = 0.0;
 String clima = "";
 String descricaoClima = "";
 WiFiClient wifiClient;
-const char *apiKey = "85af602f320d79e3c7e1bd814798105d"; // Chave api clima
 const int cityId = 3470127;                              // codigo para cidade de BH
 
 // struct para salvar e enviar dados da estação para o firebase
