@@ -31,24 +31,26 @@ TaskHandle_t xTaskSensoresCasa, xTaskSensoresEstacao;
 #define servo 27
 
 // Firebase e Wifi
-#define Wifi_SSID "MALU"
-#define Wifi_Senha "37159480"
-#define API_Key "AIzaSyAfh8oyA1gxW6alJvT8KfieBXj_8FgsnLI"
-#define DataBase_Url "https://projeto-monitoramento-39de2-default-rtdb.firebaseio.com/"
+
+
 
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
 bool singupOK = false;
-
 unsigned long sendDataPrevMillis = 0;
 
 void setup()
 {
 
+<<<<<<< HEAD
   ConfiguraPortaSerial();
   ConfiguraWifi();
+=======
+  configuraPortaSerial();
+  configuraWifi();
+>>>>>>> 35e6a4a6d0ba1bfb299aaaf38c51d571c257712f
   configuraFirebase();
   configuraPinosSensores();
 
@@ -117,6 +119,7 @@ void vTaskSensoresEstacao(void *parameters)
 
     float pitch = atan2(-event.acceleration.x, sqrt(event.acceleration.y * event.acceleration.y + event.acceleration.z * event.acceleration.z)) * 180 / M_PI;
 
+<<<<<<< HEAD
     Serial.print("AC ");
     Serial.println(pitch);
     Serial.print("UM ");
@@ -125,6 +128,16 @@ void vTaskSensoresEstacao(void *parameters)
     Serial.println(sensorValueChuva);
 
     // xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
+=======
+    Serial.print("Acelerador: ");
+    Serial.println(pitch);
+    Serial.print("Umidade: ");
+    Serial.println(sensorValueUmidade);
+    Serial.print("Chuva: ");
+    Serial.println(sensorValueChuva);
+
+    //xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
+>>>>>>> 35e6a4a6d0ba1bfb299aaaf38c51d571c257712f
 
     vTaskDelay(1000);
   }
@@ -149,7 +162,11 @@ void configuraPortaSerial()
 
   if (!Serial)
   {
+<<<<<<< HEAD
     Serial.println("Porta Seria não conectada.");
+=======
+    Serial.println("Porta Serial não conectada.");
+>>>>>>> 35e6a4a6d0ba1bfb299aaaf38c51d571c257712f
   }
 }
 
