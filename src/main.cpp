@@ -67,8 +67,9 @@ typedef struct
 
 void setup()
 {
-  configuraPortaSerial();
-  configuraWifi();
+
+  ConfiguraPortaSerial();
+  ConfiguraWifi();
   configuraFirebase();
   configuraPinosSensores();
 
@@ -210,9 +211,24 @@ void vTaskClima(void *parameters)
 
       Serial.print("Umidade: ");
       Serial.println(umidade);
+<<<<<<< HEAD
+    Serial.print("AC ");
+    Serial.println(pitch);
+    Serial.print("UM ");
+    Serial.println(sensorValueUmidade);
+    Serial.print("CH ");
+    Serial.println(sensorValueChuva);
 
-      Serial.print("Clima: ");
-      Serial.println(clima);
+    // xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
+=======
+    Serial.print("Acelerador: ");
+    Serial.println(pitch);
+    Serial.print("Umidade: ");
+    Serial.println(sensorValueUmidade);
+    Serial.print("Chuva: ");
+    Serial.println(sensorValueChuva);
+
+    //xQueueSend(xQueueSensoresEstacao, (void *)&ulVar, (TickType_t)10) != pdPASS;
 
       Serial.print("Descrição: ");
       Serial.println(descricaoClima);
@@ -247,7 +263,11 @@ void configuraPortaSerial()
 
   if (!Serial)
   {
+<<<<<<< HEAD
+    Serial.println("Porta Seria não conectada.");
+=======
     Serial.println("Porta Serial não conectada.");
+>>>>>>> 35e6a4a6d0ba1bfb299aaaf38c51d571c257712f
   }
 }
 

@@ -1,7 +1,11 @@
 {
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
+<<<<<<< HEAD
         "cmath": "cpp",
         "new": "cpp"
+=======
+        "cmath": "cpp"
+>>>>>>> d3cecd9c730ed46d7ff1a5885279c355583afc20
     }
 }
