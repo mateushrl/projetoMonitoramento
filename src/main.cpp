@@ -36,7 +36,6 @@ void configuraWifi();
 void configuraPortaSerial();
 void configuraFirebase();
 void configuraPinosSensores();
-
 // definição dos pinos
 #define SensorUmidade 33
 #define SensorChuva 34
@@ -45,7 +44,6 @@ void configuraPinosSensores();
 #define servo 27
 
 // Firebase e Wifi
-#define Wifi_SSID "MALU"                                                                // nome wifi
 
 // API Clima
 float temperatura = 0.0;
@@ -91,7 +89,7 @@ void vTaskSensoresCasa(void *parameters)
 
   while (1)
   {
-    // digitalWrite(buzzer, 1);
+    digitalWrite(buzzer, 1);
     digitalWrite(led, 1);
 
     for (int i = servoMotor.read(); i <= 180; i++)
@@ -146,36 +144,45 @@ void vTaskSensoresEstacao(void *parameters)
 
   while (1)
   {
-    sensorValueUmidade = analogRead(SensorUmidade);
-    sensorValueChuva = analogRead(SensorChuva);
+
+    for (int i = 1; i <= 5; i++)
+    {
+      sensorValueUmidade += analogRead(SensorUmidade);
+      sensorValueChuva += analogRead(SensorChuva);
+      acelerometro.getAccelerometerSensor()->getEvent(&event);
+
+      resultante += sqrt(pow(event.acceleration.x, 2) + pow(event.acceleration.y, 2) + pow(event.acceleration.z, 2));
+    }
+
+    resultante /= 5;
+    sensorValueChuva /= 5;
+    sensorValueUmidade / 5;
 
     if (sensorValueUmidade != 0)
-      sensorValueUmidade = (100 - (sensorValueUmidade * 100 / 4095));
+      sensorValueUmidade = (100 - (sensorValueUmidade * 100 / 2620));
 
     if (sensorValueChuva != 0)
       sensorValueChuva = (100 - (sensorValueChuva * 100 / 4095));
-
-    for (int i = 0; i < 10; i++)
-    {
-      acelerometro.getAccelerometerSensor()->getEvent(&event);
-      resultante += sqrt(pow(event.acceleration.x, 2) + pow(event.acceleration.y, 2) + pow(event.acceleration.z, 2));
-      resultante /= 10;
-    }
 
     inclinacao_x = atan(event.acceleration.x / resultante) * (180 / PI);
     inclinacao_y = atan(event.acceleration.y / resultante) * (180 / PI);
     inclinacao_z = atan(event.acceleration.z / resultante) * (180 / PI);
 
-    if (inclinacao_x > 20 && clima == "Rain" && sensorValueUmidade > 20)
-    {
-      vTaskResume(xTaskHandleSensoresCasa);
-      vTaskSuspend(xTaskHandleSensoresEstacao);
-    }
-
     sendDadosEstacaoFila = {sensorValueUmidade, sensorValueChuva, inclinacao_x, inclinacao_y, inclinacao_z};
     xQueueSend(xQueueFirebase, &sendDadosEstacaoFila, portMAX_DELAY);
 
-    vTaskDelay(3000);
+    if (inclinacao_x > 20 && (clima == "Rain" | sensorValueChuva > 10) && sensorValueUmidade > 20)
+    {
+      vTaskResume(xTaskHandleSensoresCasa);
+      vTaskSuspend(xTaskHandleSensoresEstacao);
+      vTaskSuspend(xTaskHandleClima);
+    }
+
+    sensorValueUmidade = 0.0;
+    sensorValueChuva = 0.0;
+    resultante = 0.0;
+
+    vTaskDelay(500);
   }
 }
 
@@ -202,20 +209,6 @@ void vTaskClima(void *parameters)
       umidade = doc["main"]["humidity"];
       clima = doc["weather"][0]["main"].as<String>();
       descricaoClima = doc["weather"][0]["description"].as<String>();
-
-      Serial.println();
-
-      Serial.print("Temperatura: ");
-      Serial.println(temperatura);
-
-      Serial.print("Umidade: ");
-      Serial.println(umidade);
-
-      Serial.print("Clima: ");
-      Serial.println(clima);
-
-      Serial.print("Descrição: ");
-      Serial.println(descricaoClima);
     }
     else
     {
