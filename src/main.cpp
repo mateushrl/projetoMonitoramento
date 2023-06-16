@@ -37,12 +37,19 @@ void configuraPinosSensores();
 void getLatLong();
 
 //  definição dos pinos
-#define SensorUmidade 33
-#define buzzer 26
-#define led 13
-#define servo 27
+#define SensorUmidade 35 
+#define buzzer 33   
+#define led 14
+#define led2 12
+#define servo 26 
 
-
+// Firebase e Wifi
+#define Wifi_SSID ""
+#define Wifi_Senha ""
+#define API_Key ""
+#define DataBase_Url "" 
+#define EMAIL ""
+#define SENHA ""
 
 // API Clima
 float temperatura = 0.0;
@@ -51,13 +58,14 @@ String clima = "";
 String descricaoClima = "";
 WiFiClient wifiClient;
 const char *apiKey = "85af602f320d79e3c7e1bd814798105d"; // Chave api clima
-const int cityId = 3470127;                              // codigo para cidade de BH
+const int cityId = 3470127; 
 String lat = "-19.92328334446637";
 String lng = "-43.995484040856454";
+bool ativaAlerta = false;
+const float x_default = 5;
+const float z_default = 83;
+const float y_default = 2;
 
-float x_default = 1.0;
-float z_default = 1.0;
-float y_default = 1.0;
 typedef struct
 {
   float sensorUmidade;
@@ -83,7 +91,7 @@ void setup()
   xTaskCreate(vTaskFirebase, "Firebase", configMINIMAL_STACK_SIZE + 8192, NULL, 1, &xTaskHandleFirebase);
   xTaskCreate(vTaskSensoresEstacao, "SensosresEstacao", configMINIMAL_STACK_SIZE + 8192, NULL, 1, &xTaskHandleSensoresEstacao);
 }
-
+bool alerta = false;
 void loop()
 {
   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -94,32 +102,24 @@ void vTaskSensoresCasa(void *parameters)
   bool alertaAtivado = false;
   while (1)
   {
-    if (xQueueReceive(xQueueControlaSensoresCasa, &alertaAtivado, portMAX_DELAY) == pdPASS)
+    if (xQueueReceive(xQueueControlaSensoresCasa, &alertaAtivado, portMAX_DELAY) == pdPASS || alerta)
     {
-      if (alertaAtivado == true)
+      if (alertaAtivado == true || alerta)
       {
+
         digitalWrite(buzzer, 1);
         digitalWrite(led, 1);
-
-        for (int i = 0; i <= 180; i++)
-        {
-          servoMotor.write(i);
-          vTaskDelay(50);
-        }
+        digitalWrite(led2, 1);
+        servoMotor.write(0);
       }
       else
       {
         digitalWrite(buzzer, 0);
         digitalWrite(led, 0);
-
-        for (int i = 180; i <= 0; i--)
-        {
-          servoMotor.write(i);
-          vTaskDelay(50);
-        }
+        digitalWrite(led2, 0);
+        servoMotor.write(90);
       }
     }
-
     vTaskDelay(pdMS_TO_TICKS(50));
   }
 }
@@ -134,7 +134,7 @@ void vTaskFirebase(void *parameters)
     {
       if (Firebase.ready() && singupOK)
       {
-        Firebase.RTDB.setFloat(&fbdo, "SensoresRealTime/UmidadeSolo/", receivedData.sensorUmidade);
+        Firebase.RTDB.setFloat(&fbdo, "SensoresRealTime/UmidadeSolo", receivedData.sensorUmidade);
         Firebase.RTDB.setFloat(&fbdo, "SensoresRealTime/Clima/Temperatura", temperatura);
         Firebase.RTDB.setString(&fbdo, "SensoresRealTime/Clima/Clima", clima);
         Firebase.RTDB.setString(&fbdo, "SensoresRealTime/Clima/Descricao", descricaoClima);
@@ -160,6 +160,8 @@ void vTaskSensoresEstacao(void *parameters)
   float inclinacao_y = 0.0;
   float inclinacao_z = 0.0;
   DadosSensoresEstacao dadosEstacao;
+  float y_abs = 0.0;
+  float z_abs = 0.0;
 
   while (1)
   {
@@ -167,9 +169,9 @@ void vTaskSensoresEstacao(void *parameters)
     {
       valorUmidade += analogRead(SensorUmidade);
       acelerometro.getAccelerometerSensor()->getEvent(&event);
-      inclinacao_x = atan(event.acceleration.x / sqrt(pow(event.acceleration.y, 2) + pow(event.acceleration.z, 2))) * (180 / PI);
-      inclinacao_y = atan(event.acceleration.y / sqrt(pow(event.acceleration.x, 2) + pow(event.acceleration.z, 2))) * (180 / PI);
-      inclinacao_z = atan(event.acceleration.z / sqrt(pow(event.acceleration.y, 2) + pow(event.acceleration.x, 2))) * (180 / PI);
+      inclinacao_x += atan(event.acceleration.x / sqrt(pow(event.acceleration.y, 2) + pow(event.acceleration.z, 2))) * (180 / PI);
+      inclinacao_y += atan(event.acceleration.y / sqrt(pow(event.acceleration.x, 2) + pow(event.acceleration.z, 2))) * (180 / PI);
+      inclinacao_z += atan(event.acceleration.z / sqrt(pow(event.acceleration.y, 2) + pow(event.acceleration.x, 2))) * (180 / PI);
     }
     inclinacao_x /= 5;
     inclinacao_y /= 5;
@@ -181,22 +183,24 @@ void vTaskSensoresEstacao(void *parameters)
 
     dadosEstacao = {valorUmidade, inclinacao_x, inclinacao_y, inclinacao_z};
 
-    if (inclinacao_x != x_default &&
-        inclinacao_y != y_default &&
-        inclinacao_z != z_default &&
-        valorUmidade > 20 && clima == "Rain")
+    y_abs = abs(inclinacao_y) - abs(y_default);
+    z_abs = abs(inclinacao_z) - abs(z_default);
+    
+    if ((y_abs > 15 || y_abs < -15) &&
+        (z_abs > 15 || z_abs < -15) &&
+        valorUmidade > 40)
     {
-      bool ativaAlerta = true;
+      ativaAlerta = true;
+      alerta = true;
       dadosEstacao.situacao = "Urgente";
-      xQueueSend(xQueueControlaSensoresCasa, &ativaAlerta, portMAX_DELAY);
       xQueueSend(xQueueFirebase, &dadosEstacao, portMAX_DELAY);
       vTaskSuspend(xTaskHandleClima);
       vTaskSuspend(xTaskHandleSensoresEstacao);
     }
-    else if (dadosEstacao.sensorUmidade > 10 && clima == "Rain")
+    else if (dadosEstacao.sensorUmidade > 20)
       dadosEstacao.situacao = "Atenção";
     else
-      dadosEstacao.situacao = "Atenção";
+      dadosEstacao.situacao = "Seguro";
 
     inclinacao_x = 0.0;
     inclinacao_y = 0.0;
@@ -204,6 +208,7 @@ void vTaskSensoresEstacao(void *parameters)
     valorUmidade = 0.0;
 
     xQueueSend(xQueueFirebase, &dadosEstacao, portMAX_DELAY);
+
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
@@ -293,8 +298,9 @@ void configuraPinosSensores()
   pinMode(servo, OUTPUT);
   pinMode(buzzer, OUTPUT);
   pinMode(led, OUTPUT);
+  pinMode(led2, OUTPUT);
 
-  servoMotor.attach(27);
+  servoMotor.attach(servo);
 }
 
 void getLatLong()
